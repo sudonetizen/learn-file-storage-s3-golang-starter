@@ -6,7 +6,9 @@ import (
 	"fmt"
     "strings"
 	"net/http"
+    "crypto/rand"
     "path/filepath"
+    "encoding/base64"
 
 	"github.com/google/uuid"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
@@ -64,10 +66,16 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
         return
     }
 
+    // key
+    key := make([]byte, 32)
+    rand.Read(key)
+    
+    key64 := base64.RawURLEncoding.EncodeToString(key)
+
     // saving as a file 
     fileFormat := strings.ReplaceAll(contentType, "image/", "")
     fileFormat = strings.TrimSpace(fileFormat)
-    path := filepath.Join("assets", videoIDString + "." + fileFormat)
+    path := filepath.Join("assets", key64 + "." + fileFormat)
 
     fle, err := os.Create(path)
     if err != nil {
@@ -83,7 +91,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
     }
   
     // updating video 
-    dataURL := fmt.Sprintf("http://localhost:%v/assets/%v.%v", cfg.port, videoIDString, fileFormat)
+    dataURL := fmt.Sprintf("http://localhost:%v/assets/%v.%v", cfg.port, key64, fileFormat)
     vde.ThumbnailURL = &dataURL
 
     err = cfg.db.UpdateVideo(vde)
