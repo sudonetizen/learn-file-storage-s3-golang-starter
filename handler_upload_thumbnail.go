@@ -62,7 +62,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
     // checking userID with userID at video's metadata
     if userID != vde.UserID {
-        respondWithError(w, http.StatusUnauthorized, "Unable to find video", err)
+        respondWithError(w, http.StatusUnauthorized, "not authorized", err)
         return
     }
 
@@ -96,7 +96,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
     err = cfg.db.UpdateVideo(vde)
     if err != nil {
-        respondWithError(w, 500, "error with converting", err)
+        respondWithError(w, 500, "error with updating", err)
         return
     }
 
