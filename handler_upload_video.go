@@ -89,6 +89,22 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
         respondWithError(w, 500, "error with resetting pointer", err)
         return
     }
+    
+    // checking aspect ratio 
+    aspectRatio, err := getVideoAspectRatio(fileTemp.Name())
+    if err != nil {
+        respondWithError(w, 500, "error with aspect ratio", err)
+        return
+    }
+
+    folderS3 := ""
+    if aspectRatio == "16:9" {
+        folderS3 = "landscape/"
+    } else if aspectRatio == "9:16" {
+        folderS3 = "portrait/"
+    } else {
+        folderS3 = "other/"
+    }
 
     // putting object into S3
     key := make([]byte, 32)
@@ -96,12 +112,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
     keyString := base64.RawURLEncoding.EncodeToString(key)
     keyString += ".mp4"
 
+    fullKey := folderS3 + keyString
+
     videoType := "video/mp4"
     _, err = cfg.s3Client.PutObject(
         r.Context(),
         &s3.PutObjectInput{
             Bucket: &cfg.s3Bucket,
-            Key: &keyString,
+            Key: &fullKey,
             Body: fileTemp,
             ContentType: &videoType,
         },
@@ -113,7 +131,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
     }
 
     // updating video 
-    dataUrl := fmt.Sprintf("https://%v.s3.%v.amazonaws.com/%v", cfg.s3Bucket, cfg.s3Region, keyString)
+    dataUrl := fmt.Sprintf("https://%v.s3.%v.amazonaws.com/%v", cfg.s3Bucket, cfg.s3Region, fullKey)
     video.VideoURL= &dataUrl
     
     err = cfg.db.UpdateVideo(video)
@@ -122,5 +140,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
         return
     }
 
+    // response
 	respondWithJSON(w, http.StatusOK, video)
 }
