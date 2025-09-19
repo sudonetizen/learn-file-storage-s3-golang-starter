@@ -106,6 +106,20 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
         folderS3 = "other/"
     }
 
+    // processing video faster opt 
+    processedVideo, err := processVideoForFastStart(fileTemp.Name())
+    if err != nil {
+        respondWithError(w, 500, "error with processing video", err)
+        return
+    }
+
+    filePV, err := os.Open(processedVideo)
+    if err != nil {
+        respondWithError(w, 500, "error with opening file", err)
+        return
+    }
+    defer filePV.Close()
+
     // putting object into S3
     key := make([]byte, 32)
     rand.Read(key) 
@@ -120,7 +134,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
         &s3.PutObjectInput{
             Bucket: &cfg.s3Bucket,
             Key: &fullKey,
-            Body: fileTemp,
+            Body: filePV,
             ContentType: &videoType,
         },
     )
