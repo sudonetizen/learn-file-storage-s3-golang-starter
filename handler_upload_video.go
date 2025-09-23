@@ -145,13 +145,20 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
     }
 
     // updating video 
-    dataUrl := fmt.Sprintf("https://%v.s3.%v.amazonaws.com/%v", cfg.s3Bucket, cfg.s3Region, fullKey)
+    // dataUrl := fmt.Sprintf("https://%v.s3.%v.amazonaws.com/%v", cfg.s3Bucket, cfg.s3Region, fullKey)
+    dataUrl := fmt.Sprintf("%v,%v", cfg.s3Bucket, fullKey)
     video.VideoURL= &dataUrl
     
     err = cfg.db.UpdateVideo(video)
     if err != nil {
         respondWithError(w, 500, "error with updating", err)
         return
+    }
+
+    // presigning video url 
+    video, err = cfg.dbVideoToSignedVideo(video)
+    if err != nil {
+        respondWithError(w, 500, "error with presigning url", err)
     }
 
     // response
